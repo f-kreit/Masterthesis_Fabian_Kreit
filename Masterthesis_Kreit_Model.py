@@ -31,7 +31,7 @@ pd.options.display.max_columns = 200
 pd.set_option('mode.chained_assignment', None)
 
 
-def preprocess_training_data(df_train_data, target_date="last_date"):
+def preprocess_training_data(df_train_data, target_date):
     """ Preprocess training data
     """
     # Map columns to VDA Client format
@@ -125,7 +125,7 @@ def preprocess_training_data(df_train_data, target_date="last_date"):
 
     return df_train_data
 
-def filter_data(df_in, price="last_price"):    
+def filter_data(df_in, price):    
     today = date.today()
     df_out = df_in.copy() 
     
@@ -161,7 +161,7 @@ def filter_data(df_in, price="last_price"):
     
     return df_out
 
-def feature_engineering(df, date_feature='last_date'):
+def feature_engineering(df, date_feature):
     """
     Create new features.
     """
@@ -223,7 +223,7 @@ def fill_missing_categorical_features(df):
 
     return df
 
-def feature_selection(df_train_data, target="last_price"):
+def feature_selection(df_train_data, target):
     """
     Cast and select features for training.
     """
@@ -290,13 +290,10 @@ def feature_selection(df_train_data, target="last_price"):
     # For regression model last_price
     elif target == "last_price":
         keep_columns = keep_columns + ['last_date', 'last_price']
-    # For classification model
-    elif target == "bool_price_change":
-        keep_columns = keep_columns + ['last_date', 'last_price', 'bool_price_change']
         
     return df_train_data[keep_columns]
 
-def data_type_casting(df, target="last_price"):
+def data_type_casting(df, target):
     """
     Because we read from csv, we need to cast the columns to the correct data types.
     """
@@ -352,9 +349,6 @@ def data_type_casting(df, target="last_price"):
         'leather_partial_leather': bool,
         'first_date': 'datetime64[ns]',
         'first_price': float,
-        # 'last_date': 'datetime64[ns]',
-        # 'last_price': float,
-        #'bool_price_change': float
     }
     
     # For regression model first_price
@@ -363,16 +357,13 @@ def data_type_casting(df, target="last_price"):
     # For regression model last_price
     elif target == "last_price":
         dtypes.update({'last_date': 'datetime64[ns]', 'last_price': float})
-    # For classification model
-    elif target == "bool_price_change":
-        dtypes.update({'bool_price_change': bool})
 
     for col in dtypes.keys():
         df[col] = df[col].astype(dtypes[col])
 
     return df
 
-def train_test_split(df_train, model_settings, target='last_price', date='last_date', drop_more_columns=None):
+def train_test_split(df_train, model_settings, target, date, drop_more_columns=None):
     """ Perform a train/test split or use the full data for the model training.
     """
     train_mode = model_settings['train_mode']
@@ -497,7 +488,7 @@ def calculate_weights(model_settings, length_train_data):
     if model_settings['weight_decay']:
         print(f"Calculating {length_train_data} weights with parameter weight_decay={model_settings['weight_decay']}")
 
-        k = (-1) * model_settings['weight_decay']  # -(10.0)**(-6)
+        k = (-1) * model_settings['weight_decay']  # -8*(10.0)**(-6)
 
         weight_arr = []
         for i in range(length_train_data):
@@ -518,7 +509,7 @@ def calc_mape(y_actual, y_predicted):
 
     return mape 
 
-def evaluate_model(model, x_test, y_test, mode='default', target="last_price"):
+def evaluate_model(model, x_test, y_test, mode, target):
     """
     Calculate the relevant model performance metrics and print it to the logs.
     """
@@ -559,7 +550,7 @@ def evaluate_model(model, x_test, y_test, mode='default', target="last_price"):
 
     return metrics
 
-def save_model(model_settings, model, target="first_price"):
+def save_model(model_settings, model, target):
     # Save model as pickle file
     today = date.today()
     
@@ -568,7 +559,7 @@ def save_model(model_settings, model, target="first_price"):
 
     print(f"Model file is saved to {output_filepath}")
 
-def save_evaluation(model_settings, metrics_result, target="first_price"):
+def save_evaluation(model_settings, metrics_result, target):
     # write metrics file to output folder
     today = date.today()
     with open(model_settings['output_path'] + 'metrics' + str(today.year) +"_" + str(today.month) + "_" + str(today.day) + "_" + target + '.json5', 'w') as fp:
@@ -589,7 +580,7 @@ current_model_settings = {
                     'one_hot_max_size': 20,
                     'max_depth': 15,
                     'learning_rate': 0.01,
-                    'weight_decay': 8.636424181361738e-06,
+                    'weight_decay': 8e-06,
                     'train_mode': 'eval',   #Controlled, if test set is generated
                     'checkpoint_interval': 900,
                     'checkpoint_path': "checkpoints/",
@@ -604,7 +595,6 @@ save_model(current_model_settings, model_first_price, target="first_price")
 # Evaluation for training and test sets
 metrics = evaluate_model(model_first_price, x_train, y_train, mode="train", target="first_price")
 metrics_result = {"train_set": metrics}
-
 if x_test is not None:
     # out-of-sample metrics if not full data are used for training
     metrics = evaluate_model(model_first_price, x_test, y_test, mode="test", target="first_price")
@@ -622,6 +612,7 @@ first_price_predict = model_first_price.predict(df_first_price_predict)
 df_cars['first_price_predict'] = first_price_predict[:, 0]
 df_cars['first_price_predict'] = df_cars['first_price_predict'].astype(int).astype(float)
 df_cars.to_pickle("output/df_cars_last_price.pkl")
+
 x_train, y_train, x_test, y_test = train_test_split(df_cars, current_model_settings, "last_price", "last_date")
 model_last_price = create_model(current_model_settings)
 train_model(model_last_price, current_model_settings, x_train, y_train)
@@ -630,7 +621,6 @@ save_model(current_model_settings, model_last_price, target="last_price")
 # Evaluation for training and test sets
 metrics = evaluate_model(model_last_price, x_train, y_train, mode="train", target="last_price")
 metrics_result = {"train_set": metrics}
-
 if x_test is not None:
     # out-of-sample metrics if not full data are used for training
     metrics = evaluate_model(model_last_price, x_test, y_test, mode="test", target="last_price")
@@ -673,21 +663,20 @@ plt.show()
 
 # Print plot picture 5-5
 fig, ax = plt.subplots(figsize=(12, 6))
-n = 16
-p = 10000
+count_clusters = 16
+price_range = 10000
 
 list_all = []
 tupel = ()
-for i in range(n):
-    min = i*p 
-    max = (i+1)*p
-    a = '<'+ str(int(max/1000))
-    if i==n-1:
-        max=10000000
-        g = (n-1)*p
-        a = str(int(g/1000)) + '+'
+for i in range(count_clusters):
+    min = i*price_range 
+    max = (i+1)*price_range
+    name_cluster = '<'+ str(int(max/1000))
+    if i == count_clusters-1:
+        max=99999999
+        name_cluster = str(int(min/1000)) + '+'
     
-    tupel = tupel + (a,)
+    tupel_clusters = tupel_clusters + (name_cluster,)
     
     median_total = df_test_w_preds[((df_test_w_preds.last_price >= min) & 
                                     (df_test_w_preds.last_price < max) & 
@@ -701,7 +690,7 @@ for i in range(n):
     list_cluster = [np.round(median_total, 3), np.round(median_under, 3), np.round(median_over, 3)]
     list_all.append(list_cluster)
 
-X = np.arange(n)
+X = np.arange(count_clusters)
 list_all = [list(i) for i in zip(*list_all)]
 ax.bar(X - 0.25, list_all[0], color = 'b', width = 0.25)
 ax.bar(X       , list_all[1], color = 'g', width = 0.25)
@@ -712,14 +701,14 @@ plt.title("Error level by clustered predicted_first_price (CatBoost)")
 plt.xlabel("predicted_first_price (in Tsd)")
 plt.ylabel("median error level")
 
-ax.set_xticks(X, tupel)
+ax.set_xticks(X, tupel_clusters)
 # plt.xlim([0, 100000])
 # plt.ylim([0, 1])
 plt.show()
 
 # Feature Importances
 # Permutation
-def plot_feature_importance_permutation(importance,names,model_type):
+def plot_feature_importance_permutation(importance, names, model_type):
     
     import seaborn as sns 
   
