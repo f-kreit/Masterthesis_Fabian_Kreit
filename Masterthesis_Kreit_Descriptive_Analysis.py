@@ -21,8 +21,8 @@ first = True
 
 # Setting global variables
 # file paths
-filepath_cars = "s3://XXXXXX"
-filepath_shops = "s3://XXXXXX"
+filepath_cars  = "s3://XXXXXX"       # censored
+filepath_shops = "s3://XXXXXX"       # censored
 
 # Load settings
 load = "Full"
@@ -96,7 +96,7 @@ def plot_count_distribution(df_distribution_in):
     df_out = df_distribution_in.copy()
     df_out["CountSum"]           = df_out["CountNotChanged"] + df_out["CountRose"] + df_out["CountDropped"]
     df_out["CountNotChangedRel"] = df_out["CountNotChanged"] / df_out["CountSum"]*100
-    df_out["CountRoseRel"]      = df_out["CountRose"]      / df_out["CountSum"]*100
+    df_out["CountRoseRel"]       = df_out["CountRose"]       / df_out["CountSum"]*100
     df_out["CountDroppedRel"]    = df_out["CountDropped"]    / df_out["CountSum"]*100
 
     ax = df_out.plot.barh(x="Year", y=["CountNotChangedRel", "CountRoseRel", "CountDroppedRel"], stacked=True, figsize=(12, 6))
@@ -309,7 +309,7 @@ for anchor_model in list_anchor_models:
 
 
 
-#*************************************************************** Descriptive Analyses Dealer ******************************************************
+#*************************************************************** Descriptive Analyses Dealer **************************************************************
 
 def merge_car_dealer_data(cardata, dealerdata):
     #Make the db in memory
@@ -354,13 +354,13 @@ list_dfs = []
 for year in range_years:
     list_dfs.append(merged_data[merged_data.year==year].groupby(['did'])['did'].count())
     
-z = 500            #intervals
-range_i = 15       #Count categories 
+interval_offers = 500            #intervals
+count_categories = 15       #Count categories 
 sum_did = 0       
 
-for i in range(range_i):
-    min_i = i*z+1
-    max_i = (i+1)*z
+for i in range(count_categories):
+    min_i = i*interval_offers+1
+    max_i = (i+1)*interval_offers
     new_row = pd.DataFrame({'category':str(min_i) + "-" + str(max_i)}, index=[0])
     sum_did = 0
     count = 0
@@ -372,13 +372,13 @@ for i in range(range_i):
     new_row.loc[:, 'Sum'] = sum_did
     df_count_by_count_dids = pd.concat([df_count_by_count_dids, new_row]).reset_index(drop=True)
     
-new_row = pd.DataFrame({'category': str(range_i*z+1) + "+"}, index=[0])
+new_row = pd.DataFrame({'category': str(count_categories*interval_offers+1) + "+"}, index=[0])
 sum_did = 0
 count = 0
 for year in range_years:
     count_merged_data_by_did = list_dfs[count]
-    new_row.loc[:, year] = count_merged_data_by_did[count_merged_data_by_did > range_i*z].count()
-    sum_did += count_merged_data_by_did[count_merged_data_by_did > range_i*z].count()
+    new_row.loc[:, year] = count_merged_data_by_did[count_merged_data_by_did > count_categories*interval_offers].count()
+    sum_did += count_merged_data_by_did[count_merged_data_by_did > count_categories*interval_offers].count()
     count += 1
 new_row.loc[:, 'Sum'] = sum_did
 df_count_by_count_dids = pd.concat([df_count_by_count_dids, new_row]).reset_index(drop=True)
